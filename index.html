@@ -2,13 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Slope Clone</title>
+  <title>Slope Clone with High Score</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
+    body { margin: 0; overflow: hidden; background: #000; color: #0f0; font-family: monospace; }
     canvas { display: block; }
+    #scoreboard {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      user-select: none;
+      pointer-events: none;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
+  <div id="scoreboard">
+    <div id="score">Score: 0</div>
+    <div id="highScore">High Score: 0</div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
   <script src="game.js"></script>
 </body>

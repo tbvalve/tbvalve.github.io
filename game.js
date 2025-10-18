@@ -36,23 +36,62 @@ for (let i = 0; i < 3; i++) {
 
 // OBSTACLES
 const obstacles = [];
+
+// NEW obstacle creation logic: sometimes left, right, middle, or both sides
 function createObstacle(zPos) {
+  // Positions for obstacle placement
+  const positions = [-2, 0, 2];
+
+  // Patterns:
+  // 0 = left only
+  // 1 = middle only
+  // 2 = right only
+  // 3 = both sides (left & right)
+  const pattern = Math.floor(Math.random() * 4);
+
+  if (pattern === 3) {
+    // Both sides: create two obstacles (left and right)
+    positions.forEach(xPos => {
+      if (xPos !== 0) createSingleObstacle(xPos, zPos);
+    });
+  } else {
+    // Single obstacle
+    createSingleObstacle(positions[pattern], zPos);
+  }
+}
+
+function createSingleObstacle(xPos, zPos) {
   const obstacleGeo = new THREE.BoxGeometry(0.5, 1, 0.5);
   const obstacleMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 });
   const obstacle = new THREE.Mesh(obstacleGeo, obstacleMat);
-  obstacle.position.set((Math.random() - 0.5) * 4, 0.75, zPos);
+  obstacle.position.set(xPos, 0.75, zPos);
   scene.add(obstacle);
   obstacles.push(obstacle);
 }
 
 // GAME VARIABLES
 let speed = 0.4;
+let lastSpeedIncreaseScore = 0;
 let leftPressed = false;
 let rightPressed = false;
 
 let velocityY = 0;
 let gravity = -0.01;
 let isFalling = false;
+
+// SCORE & TIMER
+let score = 0;
+let highScore = 0;
+const scoreDisplay = document.getElementById('score');
+const highScoreDisplay = document.getElementById('highScore');
+
+let lastPointTime = 0; // To track point timing
+
+// Load high score from localStorage
+if (localStorage.getItem('highScore')) {
+  highScore = parseInt(localStorage.getItem('highScore'), 10);
+  highScoreDisplay.textContent = `High Score: ${highScore}`;
+}
 
 // CONTROLS
 window.addEventListener('keydown', e => {
@@ -66,11 +105,19 @@ window.addEventListener('keyup', e => {
 
 // RESET FUNCTION
 function resetGame() {
+  // Update high score if beaten
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem('highScore', highScore);
+    highScoreDisplay.textContent = `High Score: ${highScore}`;
+  }
+
   // Reset ball
   ball.position.set(0, 1.5, 0);
   velocityY = 0;
   isFalling = false;
   speed = 0.4;
+  lastSpeedIncreaseScore = 0;
 
   // Reset camera
   camera.position.set(0, 8, 20);
@@ -80,13 +127,27 @@ function resetGame() {
     platform.position.z = -index * 30;
   });
 
-  // Remove old obstacles
+  // Remove obstacles
   obstacles.forEach(ob => scene.remove(ob));
   obstacles.length = 0;
+
+  // Reset key inputs
+  leftPressed = false;
+  rightPressed = false;
+
+  // Reset score & timer
+  score = 0;
+  lastPointTime = performance.now();
+  updateScore();
 }
 
-// ANIMATE
-function animate() {
+// UPDATE SCORE DISPLAY
+function updateScore() {
+  scoreDisplay.textContent = `Score: ${score}`;
+}
+
+// ANIMATE LOOP
+function animate(time = 0) {
   requestAnimationFrame(animate);
 
   if (!isFalling) {
@@ -97,6 +158,19 @@ function animate() {
 
     if (Math.abs(ball.position.x) > 2.5) {
       isFalling = true;
+    }
+
+    // Add 1 point every 1.5 seconds alive
+    if (time - lastPointTime > 1500) {
+      score += 1;
+      lastPointTime = time;
+      updateScore();
+
+      // Increase speed every 15 points
+      if (score - lastSpeedIncreaseScore >= 15) {
+        speed += 0.05;
+        lastSpeedIncreaseScore = score;
+      }
     }
   } else {
     velocityY += gravity;
@@ -124,7 +198,7 @@ function animate() {
     }
   });
 
-  // Move & remove obstacles
+  // Move & remove obstacles, check collisions
   obstacles.forEach((ob, i) => {
     if (ob.position.z > ball.position.z + 5) {
       scene.remove(ob);
@@ -142,6 +216,8 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+// Start the game
+lastPointTime = performance.now();
 animate();
 
 // HANDLE RESIZE
